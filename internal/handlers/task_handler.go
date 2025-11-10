@@ -18,58 +18,86 @@ func NewTaskHandler(s storage.Storage) *TaskHandler {
 	return &TaskHandler{storage: s}
 }
 
-func (h *TaskHandler) GetAllTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.storage.GetAllTasks()
-	if err != nil {
-		http.Error(w, "Failed to fetch tasks", http.StatusInternalServerError)
+func (h *TaskHandler) GetAllTasks(writer http.ResponseWriter, request *http.Request) {
+	// Get User From Context
+	user, ok := request.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(writer, "User not found in context", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	tasks, err := h.storage.GetAllTasks(user.ID)
+	if err != nil {
+		http.Error(writer, "Failed to fetch tasks", http.StatusInternalServerError)
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(writer).Encode(tasks)
 }
 
-func (h *TaskHandler) GetTask(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+func (h *TaskHandler) GetTask(writer http.ResponseWriter, request *http.Request) {
+	// Get User From Context
+	user, ok := request.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(writer, "User not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(request)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		http.Error(writer, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
-	task, err := h.storage.GetTaskById(id)
+	task, err := h.storage.GetTaskById(id, user.ID)
 	if err != nil {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		http.Error(writer, "Task not found", http.StatusNotFound)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(task)
+	writer.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(writer).Encode(task)
 }
 
-func (h *TaskHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
+func (h *TaskHandler) CreateTask(writer http.ResponseWriter, request *http.Request) {
+	// Get User From Context
+	user, ok := request.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(writer, "User not found in context", http.StatusInternalServerError)
+		return
+	}
+
 	var req models.CreateTaskRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	if err := json.NewDecoder(request.Body).Decode(&req); err != nil {
+		http.Error(writer, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	task, err := h.storage.CreateTask(req.Title)
+	task, err := h.storage.CreateTask(req.Title, user.ID)
 	if err != nil {
-		http.Error(w, "Error creating task", http.StatusInternalServerError)
+		http.Error(writer, "Error creating task", http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(task)
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusCreated)
+	json.NewEncoder(writer).Encode(task)
 }
 
-func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+func (h *TaskHandler) UpdateTask(writer http.ResponseWriter, request *http.Request) {
+	// Get User From Context
+	user, ok := request.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(writer, "User not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(request)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		http.Error(writer, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
@@ -77,33 +105,40 @@ func (h *TaskHandler) UpdateTask(w http.ResponseWriter, r *http.Request) {
 		Title     string `json:"title"`
 		Completed bool   `json:"completed"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+	if err := json.NewDecoder(request.Body).Decode(&req); err != nil {
+		http.Error(writer, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	task, err := h.storage.UpdateTask(id, req.Title, req.Completed)
+	task, err := h.storage.UpdateTask(id, req.Title, req.Completed, user.ID)
 	if err != nil {
-		http.Error(w, "Task not found", http.StatusNotFound)
+		http.Error(writer, "Task not found", http.StatusNotFound)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(task)
+	writer.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(writer).Encode(task)
 }
 
-func (h *TaskHandler) DeleteTask(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
+func (h *TaskHandler) DeleteTask(writer http.ResponseWriter, request *http.Request) {
+	// Get User From Context
+	user, ok := request.Context().Value("user").(models.User)
+	if !ok {
+		http.Error(writer, "User not found in context", http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(request)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
-		http.Error(w, "Invalid task ID", http.StatusBadRequest)
+		http.Error(writer, "Invalid task ID", http.StatusBadRequest)
 		return
 	}
 
-	if err := h.storage.DeleteTask(id); err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+	if err := h.storage.DeleteTask(id, user.ID); err != nil {
+		http.Error(writer, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	writer.WriteHeader(http.StatusNoContent)
 }

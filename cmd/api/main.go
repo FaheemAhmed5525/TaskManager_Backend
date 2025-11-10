@@ -26,23 +26,32 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer dbStorage.Close()
+	dbStorage.CreateTables()
 
 	taskHandler := handlers.NewTaskHandler(dbStorage)
+	authHandler := handlers.NewAuthHandler(dbStorage)
 
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
 
-	router.HandleFunc("/tasks", taskHandler.GetAllTasks).Methods("GET")
-	router.HandleFunc("/tasks/{id}", taskHandler.GetTask).Methods("GET")
-	router.HandleFunc("/tasks", taskHandler.CreateTask).Methods("POST")
-	router.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
-	router.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
+	// Auth routes
+	router.HandleFunc("/register", authHandler.Register).Methods("POST")
+	router.HandleFunc("/login", authHandler.Login).Methods("POST")
 
 	// Health check endpoint
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status": "healthy", "service": "task-api", "database": "connected"}\n`))
 	}).Methods("GET")
+
+	// Protected Task routes
+	protectedRouter := router.PathPrefix("").Subrouter()
+	protectedRouter.Use(middleware.AuthMiddleware(dbStorage))
+	protectedRouter.HandleFunc("/tasks", taskHandler.GetAllTasks).Methods("GET")
+	protectedRouter.HandleFunc("/tasks/{id}", taskHandler.GetTask).Methods("GET")
+	protectedRouter.HandleFunc("/tasks", taskHandler.CreateTask).Methods("POST")
+	protectedRouter.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
+	protectedRouter.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 
 	log.Println("Server running at :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))

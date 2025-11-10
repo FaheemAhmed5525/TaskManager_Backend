@@ -31,16 +31,12 @@ func NewPostgresStorage(conStr string) (*PostgresStorage, error) {
 	return &PostgresStorage{database: db}, nil
 }
 
-func (storage *PostgresStorage) Close() error {
-	return storage.database.Close()
-}
-
 // Create Task database interface
-func (storage *PostgresStorage) CreateTask(title string) (models.Task, error) {
+func (storage *PostgresStorage) CreateTask(title string, userId int) (models.Task, error) {
 	query := `
-	INSERT INTO tasks (title, completed, created_at, updated_at) 
-	VALUES ($1, $2, $3, $4)
-	RETURNING id, title, completed, created_at, updated_at
+	INSERT INTO tasks (title, completed, user_id, created_at, updated_at) 
+	VALUES ($1, $2, $3, $4, $5)
+	RETURNING id, title, completed, user_id, created_at, updated_at
 	`
 
 	var task models.Task
@@ -50,12 +46,14 @@ func (storage *PostgresStorage) CreateTask(title string) (models.Task, error) {
 		query,
 		title,
 		false,
+		userId,
 		now,
 		now,
 	).Scan(
 		&task.ID,
 		&task.Title,
 		&task.Completed,
+		&task.UserId,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)
@@ -68,14 +66,15 @@ func (storage *PostgresStorage) CreateTask(title string) (models.Task, error) {
 }
 
 // Get All Tasks database interface
-func (storage *PostgresStorage) GetAllTasks() ([]models.Task, error) {
+func (storage *PostgresStorage) GetAllTasks(userId int) ([]models.Task, error) {
 	query := `
-	SELECT id, title, completed, created_at, updated_at
+	SELECT id, title, completed, user_id, created_at, updated_at
 	FROM tasks
+	WHERE user_id = $1
 	ORDER BY created_at DESC
 	`
 
-	rows, error := storage.database.Query(query)
+	rows, error := storage.database.Query(query, userId)
 
 	if error != nil {
 		return nil, fmt.Errorf("failed to get tasks: %w", error)
@@ -89,6 +88,7 @@ func (storage *PostgresStorage) GetAllTasks() ([]models.Task, error) {
 			&task.ID,
 			&task.Title,
 			&task.Completed,
+			&task.UserId,
 			&task.CreatedAt,
 			&task.UpdatedAt,
 		); err != nil {
@@ -101,25 +101,26 @@ func (storage *PostgresStorage) GetAllTasks() ([]models.Task, error) {
 }
 
 // Get TAsk by id
-func (storage *PostgresStorage) GetTaskById(id int) (models.Task, error) {
+func (storage *PostgresStorage) GetTaskById(id int, userId int) (models.Task, error) {
 	query := `
-	SELECT id, title, completed, created_at, updated_at
+	SELECT id, title, completed, user_id, created_at, updated_at
 	FROM tasks
-	WHERE id = $1
+	WHERE id = $1 AND user_id = $2
 	`
 
 	var task models.Task
 
-	if error := storage.database.QueryRow(query, id).Scan(
+	if error := storage.database.QueryRow(query, id, userId).Scan(
 		&task.ID,
 		&task.Title,
 		&task.Completed,
+		&task.UserId,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	); error != nil {
 		if error == sql.ErrNoRows {
 			return models.Task{}, fmt.Errorf("task not found")
-		} else if error != nil {
+		} else {
 			return models.Task{}, fmt.Errorf("failed to get task: %w", error)
 		}
 	}
@@ -128,12 +129,12 @@ func (storage *PostgresStorage) GetTaskById(id int) (models.Task, error) {
 
 }
 
-func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool) (models.Task, error) {
+func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool, userId int) (models.Task, error) {
 	query := `
 	UPDATE tasks
 	SET title = $1, completed = $2, updated_at = $3
-	WHERE id = $4
-	RETURNING id, title, completed, created_at, updated_at
+	WHERE id = $4 AND user_id = $5
+	RETURNING id, title, completed, user_id, created_at, updated_at
 	`
 
 	var task models.Task
@@ -145,10 +146,12 @@ func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool)
 		completed,
 		now,
 		id,
+		userId,
 	).Scan(
 		&task.ID,
 		&task.Title,
 		&task.Completed,
+		&task.UserId,
 		&task.CreatedAt,
 		&task.UpdatedAt,
 	)
@@ -164,12 +167,12 @@ func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool)
 	return task, nil
 }
 
-func (storage *PostgresStorage) DeleteTask(id int) error {
+func (storage *PostgresStorage) DeleteTask(id int, userId int) error {
 	query := `
 	DELETE FROM tasks
-	WHERE id = $1
+	WHERE id = $1 AND user_id = $2
 	`
-	result, error := storage.database.Exec(query, id)
+	result, error := storage.database.Exec(query, id, userId)
 
 	if error != nil {
 		return fmt.Errorf("failed to delete task: %w", error)
@@ -185,4 +188,98 @@ func (storage *PostgresStorage) DeleteTask(id int) error {
 	}
 
 	return nil
+}
+
+// Create User
+func (storage *PostgresStorage) CreateUser(name string, email string, passwordHash string) (models.User, error) {
+	query := `INSERT INTO users (name, password_hash, email, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5)
+	RETURNING id, email, password_hash, name, created_at, updated_at`
+
+	var user models.User
+	now := time.Now()
+
+	error := storage.database.QueryRow(
+		query,
+		name,
+		passwordHash,
+		email,
+		now,
+		now,
+	).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.Name,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if error != nil {
+		return models.User{}, fmt.Errorf("faild to create user %w", error)
+	}
+
+	return user, nil
+}
+
+func (storage *PostgresStorage) GetUserByEmail(email string) (models.User, error) {
+	query := `
+	SELECT id, email, password_hash, name, created_at, updated_at
+	FROM users	
+	WHERE email = $1
+	`
+
+	var user models.User
+
+	err := storage.database.QueryRow(
+		query,
+		email,
+	).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.Name,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return models.User{}, fmt.Errorf("user not found")
+		} else {
+			return models.User{}, fmt.Errorf("unable to get user: %w", err)
+		}
+	}
+
+	return user, nil
+}
+
+func (storage *PostgresStorage) GetUserByID(id int) (models.User, error) {
+	query := `SELECT id, email, password_hash, name, created_at, updated_at
+	FROM users
+	WHERE id = $1`
+
+	var user models.User
+
+	error := storage.database.QueryRow(
+		query,
+		id,
+	).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.Name,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if error != nil {
+		if error == sql.ErrNoRows {
+			return models.User{}, fmt.Errorf("user not found")
+		} else {
+			return models.User{}, fmt.Errorf("unable to get user: %w", error)
+		}
+	}
+
+	return user, nil
 }
