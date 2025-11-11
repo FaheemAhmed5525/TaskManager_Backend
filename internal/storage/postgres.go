@@ -126,3 +126,62 @@ func (storage *PostgresStorage) GetTaskById(id int) (models.Task, error) {
 	return task, nil
 
 }
+
+func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool) (models.Task, error) {
+	query := `
+	UPDATE tasks,
+	SET title = $1, completed = $2, updated_at = $3
+	WHERE id = $4
+	RETURNING id, title, completed, created_at, updated_at
+	`
+
+	var task models.Task
+	now := time.Now()
+
+	error := storage.database.QueryRow(
+		query,
+		title,
+		completed,
+		now,
+		id,
+	).Scan(
+		&task.ID,
+		&task.Title,
+		&task.Completed,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+	)
+
+	if error != nil {
+		if error == sql.ErrNoRows {
+			return models.Task{}, fmt.Errorf("task not found")
+		} else {
+			return models.Task{}, fmt.Errorf("failed to update task: %w", error)
+		}
+	}
+
+	return task, nil
+}
+
+func (storage *PostgresStorage) DeleteTask(id int) error {
+	query := `
+	DELETE FROM tasks
+	WHERE id = $1
+	`
+	result, error := storage.database.Exec(query, id)
+
+	if error != nil {
+		return fmt.Errorf("failed to delete task: %w", error)
+	}
+
+	rowsAffected, error := result.RowsAffected()
+	if error != nil {
+		return fmt.Errorf("failed to get rows affected: %w", error)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("task not found")
+	}
+
+	return nil
+}
