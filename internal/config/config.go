@@ -15,13 +15,13 @@ type Config struct {
 	ServerPort string
 }
 
-func load() (*Config, error) {
+func Load() (*Config, error) {
 	cfg := &Config{
 		DBHost:     getEnv("DB_HOST", "localhost"),
 		DBPort:     getEnvInt("DB_PORT", 5432),
-		DBUser:     getEnv("DB_USER", "user"),
-		DBPassword: getEnv("DB_PASSWORD", "password"),
-		DBName:     getEnv("DB_NAME", "appdb"),
+		DBUser:     getEnv("DB_USER", "task_user"),
+		DBPassword: getEnv("DB_PASSWORD", "task_password"),
+		DBName:     getEnv("DB_NAME", "task_database"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
 	}
 	return cfg, nil
@@ -43,7 +43,7 @@ func getEnvInt(key string, defaultValue int) int {
 	return defaultValue
 }
 
-func getDBConnectionString(cfg *Config) string {
+func GetDBConnectionString(cfg *Config) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=disable",
 		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 }

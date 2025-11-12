@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"task_API/internal/models"
 	"time"
-	// _ "github.com/jackc/pgx/v5/stdlib"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 type PostgresStorage struct {
@@ -37,10 +38,10 @@ func (storage *PostgresStorage) Close() error {
 // Create Task database interface
 func (storage *PostgresStorage) CreateTask(title string) (models.Task, error) {
 	query := `
-	INSERT INTO tasks (title, completed, created_at, updated_at) VALUES ($1, $2, $3, $4) RETURNING id
-	          VALUES ($1, $2, $3, $4)
-			  RETURNING id, title, completed, created_at, updated_at
-			  `
+	INSERT INTO tasks (title, completed, created_at, updated_at) 
+	VALUES ($1, $2, $3, $4)
+	RETURNING id, title, completed, created_at, updated_at
+	`
 
 	var task models.Task
 	now := time.Now()
@@ -69,7 +70,7 @@ func (storage *PostgresStorage) CreateTask(title string) (models.Task, error) {
 // Get All Tasks database interface
 func (storage *PostgresStorage) GetAllTasks() ([]models.Task, error) {
 	query := `
-	SELECCT id, title, completed, created_at, updated_at
+	SELECT id, title, completed, created_at, updated_at
 	FROM tasks
 	ORDER BY created_at DESC
 	`
@@ -129,7 +130,7 @@ func (storage *PostgresStorage) GetTaskById(id int) (models.Task, error) {
 
 func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool) (models.Task, error) {
 	query := `
-	UPDATE tasks,
+	UPDATE tasks
 	SET title = $1, completed = $2, updated_at = $3
 	WHERE id = $4
 	RETURNING id, title, completed, created_at, updated_at
