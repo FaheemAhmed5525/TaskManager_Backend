@@ -2,16 +2,16 @@
 
 A complete REST API with PostgreSQL database integration.
 
-## New Features Added
+# New Features Added
 
-- ✅ PostgreSQL database integration
-- ✅ Complete CRUD operations (Create, Read, Update, Delete)
-- ✅ Dockerized development environment
-- ✅ Environment configuration
-- ✅ Database migrations
-- ✅ Proper error handling
+- ✔️ PostgreSQL database integration
+- ✔️ Complete CRUD operations (Create, Read, Update, Delete)
+- ✔️ Dockerized development environment
+- ✔️ Environment configuration
+- ✔️ Database migrations
+- ✔️ Proper error handling
 
-## API Endpoints
+# API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -22,7 +22,7 @@ A complete REST API with PostgreSQL database integration.
 | PUT | `/tasks/{id}` | Update task (partial updates supported) |
 | DELETE | `/tasks/{id}` | Delete task |
 
-## Development Setup
+# Development Setup
 
 
 # Start database
@@ -31,13 +31,13 @@ docker-compose up -d
 # Run application
 go run cmd/api/main.go
 
-# Access pgAdmin (database GUI)
-# http://localhost:8081
-# Email: admin@taskapi.com
-# Password: admin_password
+ Access pgAdmin (database GUI)
+ http://localhost:8081
+ Email: admin@taskapi.com
+ Password: admin_password
 
 
-## Environment Variables
+# Environment Variables
 | Variable	|   Default  	| Description |
 |-----------|-------------|-------------|
 |DB_HOST	|localhost|	|Database host|
@@ -62,18 +62,11 @@ curl -X PUT -H "Content-Type: application/json" -d '{"completed": true}' http://
 # Delete
 curl -X DELETE http://localhost:8080/tasks/1
 
-Learning Objectives Achieved
-
-    PostgreSQL integration with Go
-
-    Database migrations
-
-    Complete CRUD operations
-
-    Environment configuration management
-
-    Docker for development environment
-
-    SQL query building and execution
-
-    Proper error handling with database
+# Learning Objectives Achieved
+. PostgreSQL integration with Go
+. Database migrations
+. Complete CRUD operations
+. Environment configuration management
+. Docker for development environment
+. SQL query building and execution
+. Proper error handling with database
