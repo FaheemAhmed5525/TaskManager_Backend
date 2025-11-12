@@ -63,10 +63,10 @@ curl -X PUT -H "Content-Type: application/json" -d '{"completed": true}' http://
 curl -X DELETE http://localhost:8080/tasks/1
 
 # Learning Objectives Achieved
-. PostgreSQL integration with Go
-. Database migrations
-. Complete CRUD operations
-. Environment configuration management
-. Docker for development environment
-. SQL query building and execution
-. Proper error handling with database
+- PostgreSQL integration with Go
+- Database migrations
+- Complete CRUD operations
+- Environment configuration management
+- Docker for development environment
+- SQL query building and execution
+- Proper error handling with database
