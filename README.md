@@ -4,12 +4,12 @@ A complete REST API with PostgreSQL database integration.
 
 # New Features Added
 
-- ✔️ PostgreSQL database integration
-- ✔️ Complete CRUD operations (Create, Read, Update, Delete)
-- ✔️ Dockerized development environment
-- ✔️ Environment configuration
-- ✔️ Database migrations
-- ✔️ Proper error handling
+- User registration and login implemented
+- JWT token generation and validation
+- Password hashing with bcrypt
+- Authentication middleware
+- User-specific task management
+- Protected API endpoints
 
 # API Endpoints
 
