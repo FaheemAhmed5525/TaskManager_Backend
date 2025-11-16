@@ -53,6 +53,7 @@ func main() {
 	protectedRouter.HandleFunc("/tasks/{id}", taskHandler.UpdateTask).Methods("PUT")
 	protectedRouter.HandleFunc("/tasks/{id}", taskHandler.DeleteTask).Methods("DELETE")
 
+	// Start server
 	log.Println("Server running at :8080")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
