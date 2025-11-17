@@ -21,7 +21,7 @@ func main() {
 	}
 
 	// Initialize database storage
-	dbStorage, err := storage.NewPostgresStorage(config.GetDBConnectionString(cfg))
+	dbStorage, err := storage.NewPostgresStorage(config.GetDBConnectionString(&cfg.Database))
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

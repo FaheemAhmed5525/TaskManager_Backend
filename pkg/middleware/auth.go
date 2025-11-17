@@ -35,7 +35,7 @@ func AuthMiddleware(storage *storage.PostgresStorage) func(http.Handler) http.Ha
 			}
 
 			// Get User from DB
-			user, error := storage.GetUserByID(claim.UserId)
+			user, error := storage.GetUserById(claim.UserId)
 			if error != nil {
 				http.Error(writer, "User not found: "+error.Error(), http.StatusUnauthorized)
 				return

@@ -16,3 +16,9 @@ type Task struct {
 type CreateTaskRequest struct {
 	Title string `json:"title"`
 }
+
+type UpdateTaskRequest struct {
+	Title     string    `json:"title"`
+	Completed bool      `json:"completed"`
+	UpdatedAt time.Time `json:"updated_at"`
+}

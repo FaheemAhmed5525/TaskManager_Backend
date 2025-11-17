@@ -254,7 +254,7 @@ func (storage *PostgresStorage) GetUserByEmail(email string) (models.User, error
 	return user, nil
 }
 
-func (storage *PostgresStorage) GetUserByID(id int) (models.User, error) {
+func (storage *PostgresStorage) GetUserById(id int) (models.User, error) {
 	query := `SELECT id, email, password_hash, name, created_at, updated_at
 	FROM users
 	WHERE id = $1`
