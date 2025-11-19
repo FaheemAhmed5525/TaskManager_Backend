@@ -1,38 +1,24 @@
-package storage
+package repositories
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
-	"task_API/internal/models"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"task_API/internal/models"
+	"task_API/internal/storage"
 )
 
-type PostgresStorage struct {
-	DB *sql.DB
+type taskRepository struct {
+	database *sql.DB
 }
 
-func NewPostgresStorage(conStr string) (*PostgresStorage, error) {
-	db, error := sql.Open("pgx", conStr)
-	if error != nil {
-		return nil, fmt.Errorf("failed to connect to database: %w", error)
-	}
-
-	// Connection check
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err := db.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
-
-	return &PostgresStorage{DB: db}, nil
+func NewTaskRepository(database *storage.PostgresStorage) TaskRepository {
+	return &taskRepository{database: database.DB}
 }
 
 // Create Task database interface
-func (storage *PostgresStorage) CreateTask(title string, userId int) (models.Task, error) {
+func (repo *taskRepository) CreateTask(t *models.Task) error {
 	query := `
 	INSERT INTO tasks (title, completed, user_id, created_at, updated_at) 
 	VALUES ($1, $2, $3, $4, $5)
@@ -40,15 +26,14 @@ func (storage *PostgresStorage) CreateTask(title string, userId int) (models.Tas
 	`
 
 	var task models.Task
-	now := time.Now()
 
-	error := storage.DB.QueryRow(
+	error := repo.database.QueryRow(
 		query,
-		title,
-		false,
-		userId,
-		now,
-		now,
+		t.Title,
+		t.Completed,
+		t.UserId,
+		t.CreatedAt,
+		t.UpdatedAt,
 	).Scan(
 		&task.ID,
 		&task.Title,
@@ -59,14 +44,14 @@ func (storage *PostgresStorage) CreateTask(title string, userId int) (models.Tas
 	)
 
 	if error != nil {
-		return models.Task{}, fmt.Errorf("failed to create task: %w", error)
+		return fmt.Errorf("failed to create task: %w", error)
 	}
 
-	return task, nil
+	return nil
 }
 
 // Get All Tasks database interface
-func (storage *PostgresStorage) GetAllTasks(userId int) ([]models.Task, error) {
+func (repo *taskRepository) GetAllTasks(userId int) ([]*models.Task, error) {
 	query := `
 	SELECT id, title, completed, user_id, created_at, updated_at
 	FROM tasks
@@ -74,14 +59,14 @@ func (storage *PostgresStorage) GetAllTasks(userId int) ([]models.Task, error) {
 	ORDER BY created_at DESC
 	`
 
-	rows, error := storage.DB.Query(query, userId)
+	rows, error := repo.database.Query(query, userId)
 
 	if error != nil {
 		return nil, fmt.Errorf("failed to get tasks: %w", error)
 	}
 	defer rows.Close()
 
-	var tasks []models.Task
+	var tasks []*models.Task
 	for rows.Next() {
 		var task models.Task
 		if err := rows.Scan(
@@ -94,23 +79,23 @@ func (storage *PostgresStorage) GetAllTasks(userId int) ([]models.Task, error) {
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
-		tasks = append(tasks, task)
+		tasks = append(tasks, &task)
 	}
 
 	return tasks, nil
 }
 
 // Get TAsk by id
-func (storage *PostgresStorage) GetTaskById(id int, userId int) (models.Task, error) {
+func (repo *taskRepository) GetTaskById(id int) (*models.Task, error) {
 	query := `
 	SELECT id, title, completed, user_id, created_at, updated_at
 	FROM tasks
-	WHERE id = $1 AND user_id = $2
+	WHERE id = $1
 	`
 
-	var task models.Task
+	var task *models.Task
 
-	if error := storage.DB.QueryRow(query, id, userId).Scan(
+	if error := repo.database.QueryRow(query, id).Scan(
 		&task.ID,
 		&task.Title,
 		&task.Completed,
@@ -119,9 +104,9 @@ func (storage *PostgresStorage) GetTaskById(id int, userId int) (models.Task, er
 		&task.UpdatedAt,
 	); error != nil {
 		if error == sql.ErrNoRows {
-			return models.Task{}, fmt.Errorf("task not found")
+			return &models.Task{}, fmt.Errorf("task not found")
 		} else {
-			return models.Task{}, fmt.Errorf("failed to get task: %w", error)
+			return &models.Task{}, fmt.Errorf("failed to get task: %w", error)
 		}
 	}
 
@@ -129,7 +114,7 @@ func (storage *PostgresStorage) GetTaskById(id int, userId int) (models.Task, er
 
 }
 
-func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool, userId int) (models.Task, error) {
+func (repo *taskRepository) UpdateTask(task *models.Task) error {
 	query := `
 	UPDATE tasks
 	SET title = $1, completed = $2, updated_at = $3
@@ -137,42 +122,41 @@ func (storage *PostgresStorage) UpdateTask(id int, title string, completed bool,
 	RETURNING id, title, completed, user_id, created_at, updated_at
 	`
 
-	var task models.Task
-	now := time.Now()
+	var t models.Task
 
-	error := storage.DB.QueryRow(
+	error := repo.database.QueryRow(
 		query,
-		title,
-		completed,
-		now,
-		id,
-		userId,
+		task.Title,
+		task.Completed,
+		task.Completed,
+		task.ID,
+		task.UserId,
 	).Scan(
-		&task.ID,
-		&task.Title,
-		&task.Completed,
-		&task.UserId,
-		&task.CreatedAt,
-		&task.UpdatedAt,
+		&t.ID,
+		&t.Title,
+		&t.Completed,
+		&t.UserId,
+		&t.CreatedAt,
+		&t.UpdatedAt,
 	)
 
 	if error != nil {
 		if error == sql.ErrNoRows {
-			return models.Task{}, fmt.Errorf("task not found")
+			return fmt.Errorf("task not found")
 		} else {
-			return models.Task{}, fmt.Errorf("failed to update task: %w", error)
+			return fmt.Errorf("failed to update task: %w", error)
 		}
 	}
 
-	return task, nil
+	return nil
 }
 
-func (storage *PostgresStorage) DeleteTask(id int, userId int) error {
+func (repo *taskRepository) DeleteTask(id int) error {
 	query := `
 	DELETE FROM tasks
-	WHERE id = $1 AND user_id = $2
+	WHERE id = $1 
 	`
-	result, error := storage.DB.Exec(query, id, userId)
+	result, error := repo.database.Exec(query, id)
 
 	if error != nil {
 		return fmt.Errorf("failed to delete task: %w", error)
@@ -191,7 +175,7 @@ func (storage *PostgresStorage) DeleteTask(id int, userId int) error {
 }
 
 // Create User
-func (storage *PostgresStorage) CreateUser(name string, email string, passwordHash string) (models.User, error) {
+func (repo *taskRepository) CreateUser(name string, email string, passwordHash string) (models.User, error) {
 	query := `INSERT INTO users (name, password_hash, email, created_at, updated_at)
 	VALUES ($1, $2, $3, $4, $5)
 	RETURNING id, email, password_hash, name, created_at, updated_at`
@@ -199,7 +183,7 @@ func (storage *PostgresStorage) CreateUser(name string, email string, passwordHa
 	var user models.User
 	now := time.Now()
 
-	error := storage.DB.QueryRow(
+	error := repo.database.QueryRow(
 		query,
 		name,
 		passwordHash,
@@ -222,7 +206,7 @@ func (storage *PostgresStorage) CreateUser(name string, email string, passwordHa
 	return user, nil
 }
 
-func (storage *PostgresStorage) GetUserByEmail(email string) (models.User, error) {
+func (repo *taskRepository) GetUserByEmail(email string) (models.User, error) {
 	query := `
 	SELECT id, email, password_hash, name, created_at, updated_at
 	FROM users	
@@ -231,7 +215,7 @@ func (storage *PostgresStorage) GetUserByEmail(email string) (models.User, error
 
 	var user models.User
 
-	err := storage.DB.QueryRow(
+	err := repo.database.QueryRow(
 		query,
 		email,
 	).Scan(
@@ -254,14 +238,14 @@ func (storage *PostgresStorage) GetUserByEmail(email string) (models.User, error
 	return user, nil
 }
 
-func (storage *PostgresStorage) GetUserById(id int) (models.User, error) {
+func (repo *taskRepository) GetUserById(id int) (models.User, error) {
 	query := `SELECT id, email, password_hash, name, created_at, updated_at
 	FROM users
 	WHERE id = $1`
 
 	var user models.User
 
-	error := storage.DB.QueryRow(
+	error := repo.database.QueryRow(
 		query,
 		id,
 	).Scan(

@@ -43,7 +43,7 @@ func (storage *PostgresStorage) CreateTables() error {
 	}
 
 	for index, sttemetns := range statements {
-		_, err := storage.database.ExecContext(ctx, sttemetns)
+		_, err := storage.DB.ExecContext(ctx, sttemetns)
 		if err != nil {
 			return fmt.Errorf("failed to execute statement %d: %w", index, err)
 		}
@@ -55,5 +55,5 @@ func (storage *PostgresStorage) CreateTables() error {
 }
 
 func (storage *PostgresStorage) Close() error {
-	return storage.database.Close()
+	return storage.DB.Close()
 }

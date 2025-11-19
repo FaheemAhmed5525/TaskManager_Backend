@@ -11,7 +11,6 @@ type AuthService interface {
 type TaskService interface {
 	CreateTask(req *models.CreateTaskRequest, userId int) (*models.Task, error)
 	GetTaskById(taskId int, userId int) (*models.Task, error)
-	GetTaskByEmail(email string, userId int) (*models.Task, error)
 	GetAllTasks(userId int) ([]*models.Task, error)
 	UpdateTask(taskId int, req *models.UpdateTaskRequest, userId int) (*models.Task, error)
 }

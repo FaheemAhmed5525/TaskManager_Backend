@@ -1,0 +1,29 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin
+
+# Dependencies
+/vendor
+
+
+# Environment
+.env
+.env.local
+.env.producation
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage 
+coverage.text
+coverage.html
+
+# Buildartifacts
+/build
+/dist

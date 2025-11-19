@@ -1,0 +1,86 @@
+.PHONY build run text clean migrate dev doker-build docker-run
+
+# Build the task_API
+build:
+	@echo "Building the task_API..."
+	go build -o bin/task_API cmd/api/main.go
+
+
+# Run the task_API
+run: build
+	@echo "Running the task_API..."
+	./bin/task_API
+
+# Run in development mode
+dev:
+	@echo "Running development mode with air for hot reload..."
+	air
+
+# Run test
+test:
+	@echo "Running tests..."
+	go test -v ./...
+
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with converage..."
+	go text -coverprofile=coverage.out ./...
+	go tool cover -html=coverage.out -o coverage.html
+
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning build artifacts..."
+	rm -rf bin/ coverage.out coverage.html
+
+# Database migration
+migrate:
+	@echo "Running database migrations..."
+	go run scripts/migrate.go
+
+# Build Docker image
+docker-build:
+	@echo "Building Docker image..."
+	docker build -t task_API:latest .
+
+
+# Run Docker container
+docker-run:
+	@echo "Running Docker container..."
+	docker-compose up -d
+
+# install Dependencies
+deps:
+	@echo "Installing dependencies..."
+	go mod download
+	go mod verify
+
+
+# install dev tools
+tools:
+	@echo "Installing development tools..."
+	go install github.com/cosmtrek/air@latest
+	go install github.com/golang/mock/mockgen@latest
+
+# Generate Mocks
+mocks:
+	@echo "Generating mocks..."
+	mockgen -source=internal/services/interfaces.go -destination=tests/mocks/services_mock.go -package=mocks
+	mockgen -source=internal/storate/repositories/interfaces.go -destination=tests/mocks/repositories_mock.go -package=mocks
+
+
+# Help command
+help:
+	@echo "Available commands:"
+	@echo "  build          - Build the task_API"
+	@echo "  run            - Run the task_API"
+	@echo "  dev            - Run in development mode with hot reload"
+	@echo "  test           - Run tests"
+	@echo "  test-coverage  - Run tests with coverage"
+	@echo "  clean          - Clean build artifacts"
+	@echo "  migrate        - Run database migrations"
+	@echo "  docker-build   - Build Docker image"
+	@echo "  docker-run     - Run Docker container"
+	@echo "  deps           - Install dependencies"
+	@echo "  tools          - Install development tools"
+	@echo "  mocks          - Generate mocks for interfaces"

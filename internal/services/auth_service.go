@@ -58,5 +58,43 @@ func (auth *authService) Register(request *models.RegisterUserRequest) (*models.
 		User:  *user,
 		Token: token,
 	}, nil
+}
 
+func (auth *authService) Login(request *models.LoginUserRequest) (*models.AuthResponse, error) {
+	user, error := auth.userRepo.GetUserByEmail(request.Email)
+
+	if error != nil {
+		return nil, fmt.Errorf("invalid creadientials")
+	}
+
+	// Password Verification
+	if !utils.CheckHashedPassword(user.PasswordHash, request.Password) {
+		return nil, fmt.Errorf("invalid creadientials")
+	}
+
+	// JWT Token Generation
+	token, error := utils.GenerateJwtToken(user.ID, user.Email)
+	if error != nil {
+		return nil, fmt.Errorf("failed to generate token: %v", error)
+	}
+
+	return &models.AuthResponse{
+		User:  *user,
+		Token: token,
+	}, nil
+}
+
+func (auth *authService) ValidateToken(tokenString string) (*models.User, error) {
+	claim, error := utils.ValidateJWTToken(tokenString)
+
+	if error != nil {
+		return nil, fmt.Errorf("invalid token: %v", error)
+	}
+
+	user, error := auth.userRepo.GetUserById(claim.UserId)
+	if error != nil {
+		return nil, fmt.Errorf("user not found: %v", error)
+	}
+
+	return user, nil
 }

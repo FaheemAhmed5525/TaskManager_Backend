@@ -5,7 +5,10 @@ import (
 	"net/http"
 	"task_API/internal/config"
 	"task_API/internal/handlers"
+	"task_API/internal/services"
 	"task_API/internal/storage"
+	"task_API/internal/storage/repositories"
+	"task_API/pkg/logger"
 	"task_API/pkg/middleware"
 
 	"github.com/gorilla/mux"
@@ -20,19 +23,36 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	appLogger := logger.NewLogger(cfg.Logging.Level, cfg.Logging.Format)
+
 	// Initialize database storage
 	dbStorage, err := storage.NewPostgresStorage(config.GetDBConnectionString(&cfg.Database))
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		appLogger.Fatal().Err(err).Msg("Failed to connect to database")
+		// log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer dbStorage.Close()
+
 	dbStorage.CreateTables()
 
+	// Repositories
+	userRepo := repositories.NewUserRepository(dbStorage)
+	taskRepo := repositories.NewTaskRepository(dbStorage)
+
+	// services
+	authService := services.NewAuthService(userRepo, cfg.JWT.Secret, cfg.JWT.Expiration)
+	taskService := services.NewTaskService(taskRepo)
+
+	// Handlers
 	taskHandler := handlers.NewTaskHandler(dbStorage)
 	authHandler := handlers.NewAuthHandler(dbStorage)
 
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)
+
+	//  // Global middleware
+	// router.Use(middleware.Logging(appLogger))
+	// router.Use(middleware.Recovery(appLogger))
 
 	// Auth routes
 	router.HandleFunc("/register", authHandler.Register).Methods("POST")

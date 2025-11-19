@@ -5,14 +5,15 @@ import (
 	"fmt"
 
 	"task_API/internal/models"
+	"task_API/internal/storage"
 )
 
 type userRepository struct {
 	database *sql.DB
 }
 
-func NewUserRepository(database *sql.DB) UserRepository {
-	return &userRepository{database: database}
+func NewUserRepository(database *storage.PostgresStorage) UserRepository {
+	return &userRepository{database: database.DB}
 }
 
 func (repo *userRepository) CreateUser(user *models.User) error {
