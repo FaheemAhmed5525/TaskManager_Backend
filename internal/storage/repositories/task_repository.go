@@ -93,7 +93,7 @@ func (repo *taskRepository) GetTaskById(id int) (*models.Task, error) {
 	WHERE id = $1
 	`
 
-	var task *models.Task
+	var task models.Task
 
 	if error := repo.database.QueryRow(query, id).Scan(
 		&task.ID,
@@ -110,7 +110,7 @@ func (repo *taskRepository) GetTaskById(id int) (*models.Task, error) {
 		}
 	}
 
-	return task, nil
+	return &task, nil
 
 }
 

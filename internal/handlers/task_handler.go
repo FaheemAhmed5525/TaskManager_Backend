@@ -53,7 +53,7 @@ func (h *TaskHandler) GetTask(writer http.ResponseWriter, request *http.Request)
 
 	task, err := h.taskService.GetTaskById(id, user.ID)
 	if err != nil {
-		http.Error(writer, "Task not found", http.StatusNotFound)
+		http.Error(writer, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -75,9 +75,9 @@ func (h *TaskHandler) CreateTask(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	task, err := h.taskService.CreateTask(req.Title, user.ID)
+	task, err := h.taskService.CreateTask(&req, user.ID)
 	if err != nil {
-		http.Error(writer, "Error creating task", http.StatusInternalServerError)
+		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -101,18 +101,15 @@ func (h *TaskHandler) UpdateTask(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	var req struct {
-		Title     string `json:"title"`
-		Completed bool   `json:"completed"`
-	}
+	var req models.UpdateTaskRequest
 	if err := json.NewDecoder(request.Body).Decode(&req); err != nil {
-		http.Error(writer, "Invalid request payload", http.StatusBadRequest)
+		http.Error(writer, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	task, err := h.taskService.UpdateTask(id, req.Title, req.Completed, user.ID)
+	task, err := h.taskService.UpdateTask(id, &req, user.ID)
 	if err != nil {
-		http.Error(writer, "Task not found", http.StatusNotFound)
+		http.Error(writer, err.Error(), http.StatusNotFound)
 		return
 	}
 
