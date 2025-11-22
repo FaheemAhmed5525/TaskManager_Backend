@@ -44,8 +44,8 @@ func main() {
 	taskService := services.NewTaskService(taskRepo)
 
 	// Handlers
-	taskHandler := handlers.NewTaskHandler(dbStorage)
-	authHandler := handlers.NewAuthHandler(dbStorage)
+	taskHandler := handlers.NewTaskHandler(taskService)
+	authHandler := handlers.NewAuthHandler(authService)
 
 	router := mux.NewRouter()
 	router.Use(middleware.LoggingMiddleware)

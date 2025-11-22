@@ -5,17 +5,17 @@ import (
 	"net/http"
 	"strconv"
 	"task_API/internal/models"
-	"task_API/internal/storage"
+	"task_API/internal/services"
 
 	"github.com/gorilla/mux"
 )
 
 type TaskHandler struct {
-	storage storage.Storage // interface, not concrete type
+	taskService services.TaskService
 }
 
-func NewTaskHandler(s storage.Storage) *TaskHandler {
-	return &TaskHandler{storage: s}
+func NewTaskHandler(taskService services.TaskService) *TaskHandler {
+	return &TaskHandler{taskService: taskService}
 }
 
 func (h *TaskHandler) GetAllTasks(writer http.ResponseWriter, request *http.Request) {
@@ -26,7 +26,7 @@ func (h *TaskHandler) GetAllTasks(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	tasks, err := h.storage.GetAllTasks(user.ID)
+	tasks, err := h.taskService.GetAllTasks(user.ID)
 	if err != nil {
 		http.Error(writer, "Failed to fetch tasks", http.StatusInternalServerError)
 		return
@@ -51,7 +51,7 @@ func (h *TaskHandler) GetTask(writer http.ResponseWriter, request *http.Request)
 		return
 	}
 
-	task, err := h.storage.GetTaskById(id, user.ID)
+	task, err := h.taskService.GetTaskById(id, user.ID)
 	if err != nil {
 		http.Error(writer, "Task not found", http.StatusNotFound)
 		return
@@ -75,7 +75,7 @@ func (h *TaskHandler) CreateTask(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	task, err := h.storage.CreateTask(req.Title, user.ID)
+	task, err := h.taskService.CreateTask(req.Title, user.ID)
 	if err != nil {
 		http.Error(writer, "Error creating task", http.StatusInternalServerError)
 		return
@@ -110,7 +110,7 @@ func (h *TaskHandler) UpdateTask(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	task, err := h.storage.UpdateTask(id, req.Title, req.Completed, user.ID)
+	task, err := h.taskService.UpdateTask(id, req.Title, req.Completed, user.ID)
 	if err != nil {
 		http.Error(writer, "Task not found", http.StatusNotFound)
 		return
@@ -135,7 +135,7 @@ func (h *TaskHandler) DeleteTask(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	if err := h.storage.DeleteTask(id, user.ID); err != nil {
+	if err := h.taskService.DeleteTask(id, user.ID); err != nil {
 		http.Error(writer, err.Error(), http.StatusNotFound)
 		return
 	}

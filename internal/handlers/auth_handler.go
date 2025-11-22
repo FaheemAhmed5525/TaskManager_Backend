@@ -4,19 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 	"task_API/internal/models"
-	"task_API/internal/storage"
-	"task_API/pkg/utils"
+	"task_API/internal/services"
 )
 
 type AuthHandler struct {
-	storage *storage.PostgresStorage
+	authService services.AuthService
 }
 
-func NewAuthHandler(storage *storage.PostgresStorage) *AuthHandler {
-	return &AuthHandler{storage: storage}
+func NewAuthHandler(authService services.AuthService) *AuthHandler {
+	return &AuthHandler{authService: authService}
 }
 
-func (handler AuthHandler) Register(writer http.ResponseWriter, request *http.Request) {
+func (handler *AuthHandler) Register(writer http.ResponseWriter, request *http.Request) {
 	var registerRequest models.RegisterUserRequest
 
 	if error := json.NewDecoder(request.Body).Decode(&registerRequest); error != nil {
@@ -34,41 +33,16 @@ func (handler AuthHandler) Register(writer http.ResponseWriter, request *http.Re
 		return
 	}
 
-	// Creating password hash
-	hashedPass, error := utils.HashPassword(registerRequest.Password)
-	if error != nil {
-		http.Error(writer, "Unable to process password", http.StatusBadRequest)
-		return
-	}
-
 	// Create User
-	user, error := handler.storage.CreateUser(registerRequest.Name, registerRequest.Email, hashedPass)
+	authResponse, error := handler.authService.Register(&registerRequest)
 	if error != nil {
 		http.Error(writer, "Unable to create user: "+error.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Generating Token
-	token, error := utils.GenerateJwtToken(user.ID, user.Email)
-	if error != nil {
-		http.Error(writer, "Unable to generate token", http.StatusInternalServerError)
-		return
-	}
-
-	response := models.AuthResponse{
-		User: models.User{
-			ID:        user.ID,
-			Email:     user.Email,
-			Name:      user.Name,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-		},
-		Token: token,
-	}
-
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
-	json.NewEncoder(writer).Encode(response)
+	json.NewEncoder(writer).Encode(authResponse)
 }
 
 func (handler *AuthHandler) Login(writer http.ResponseWriter, request *http.Request) {
@@ -79,36 +53,15 @@ func (handler *AuthHandler) Login(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	user, error := handler.storage.GetUserByEmail(loginRequest.Email)
+	authResponse, error := handler.authService.Login(&loginRequest)
+
 	if error != nil {
-		http.Error(writer, "Invalid email", http.StatusNotFound)
+		http.Error(writer, error.Error(), http.StatusNotFound)
 		return
-	}
-
-	if !utils.CheckHashedPassword(user.PasswordHash, loginRequest.Password) {
-		http.Error(writer, "Invalid password", http.StatusUnauthorized)
-		return
-	}
-
-	token, error := utils.GenerateJwtToken(user.ID, user.Email)
-	if error != nil {
-		http.Error(writer, "Unable to generate token", http.StatusInternalServerError)
-		return
-	}
-
-	response := models.AuthResponse{
-		User: models.User{
-			ID:        user.ID,
-			Email:     user.Email,
-			Name:      user.Name,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-		},
-		Token: token,
 	}
 
 	writer.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(writer).Encode(response)
+	json.NewEncoder(writer).Encode(authResponse)
 }
 
 // Get Profile returns the current User Profile

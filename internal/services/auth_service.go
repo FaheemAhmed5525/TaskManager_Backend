@@ -15,7 +15,7 @@ type authService struct {
 	jwtExpiration time.Duration
 }
 
-func NewAuthService(userRepo repositories.UserRepository, jwtSecret string, jwtExpiration time.Duration) *authService {
+func NewAuthService(userRepo repositories.UserRepository, jwtSecret string, jwtExpiration time.Duration) AuthService {
 	return &authService{
 		userRepo:      userRepo,
 		jwtSecret:     jwtSecret,

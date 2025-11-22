@@ -13,4 +13,5 @@ type TaskService interface {
 	GetTaskById(taskId int, userId int) (*models.Task, error)
 	GetAllTasks(userId int) ([]*models.Task, error)
 	UpdateTask(taskId int, req *models.UpdateTaskRequest, userId int) (*models.Task, error)
+	DeleteTask(taskId int, userId int) error
 }

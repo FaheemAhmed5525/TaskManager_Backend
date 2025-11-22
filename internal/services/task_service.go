@@ -12,7 +12,7 @@ type taskService struct {
 	taskRepo repositories.TaskRepository
 }
 
-func NewTaskService(taskRepo repositories.TaskRepository) *taskService {
+func NewTaskService(taskRepo repositories.TaskRepository) TaskService {
 	return &taskService{
 		taskRepo: taskRepo,
 	}
@@ -46,20 +46,7 @@ func (tService *taskService) GetTaskById(taskId int, userId int) (*models.Task, 
 }
 
 func (tService *taskService) GetAllTasks(userId int) ([]*models.Task, error) {
-	tasks, err := tService.taskRepo.GetAllTasks(userId)
-	if err != nil {
-		return nil, err
-	}
-
-	var filtered []*models.Task // must be a slice, not a single pointer
-
-	for _, task := range tasks {
-		if task.UserId == userId {
-			filtered = append(filtered, task)
-		}
-	}
-
-	return filtered, nil
+	return tService.taskRepo.GetAllTasks(userId)
 }
 
 func (tService *taskService) UpdateTask(taskId int, req *models.UpdateTaskRequest, userId int) (*models.Task, error) {
@@ -85,4 +72,15 @@ func (tService *taskService) UpdateTask(taskId int, req *models.UpdateTaskReques
 		return nil, err
 	}
 	return task, nil
+}
+
+func (tService *taskService) DeleteTask(taskId int, userId int) error {
+	task, err := tService.taskRepo.GetTaskById(taskId)
+	if err != nil {
+		return err
+	}
+	if task.UserId != userId {
+		return fmt.Errorf("unauthorized access to task")
+	}
+	return tService.taskRepo.DeleteTask(taskId)
 }
